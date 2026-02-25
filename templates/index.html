@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📄 Document Summarizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #1e1e2e;
+      --surface:  #313244;
+      --overlay:  #45475a;
+      --text:     #cdd6f4;
+      --subtext:  #a6adc8;
+      --blue:     #89b4fa;
+      --mauve:    #cba6f7;
+      --green:    #a6e3a1;
+      --red:      #f38ba8;
+      --yellow:   #f9e2af;
+      --teal:     #94e2d5;
+      --rosewater:#f5e0dc;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(137,180,250,0.08) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(203,166,247,0.08) 0%, transparent 60%);
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: fadeDown 0.7s ease;
+    }
+
+    .hero .icon {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 0 24px rgba(137,180,250,0.5));
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 16px rgba(137,180,250,0.4)); }
+      50%       { filter: drop-shadow(0 0 32px rgba(203,166,247,0.7)); }
+    }
+
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--blue), var(--mauve));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero p {
+      color: var(--subtext);
+      font-size: 1.05rem;
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--overlay);
+      border-radius: 20px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 560px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+      animation: fadeUp 0.7s ease 0.1s both;
+    }
+
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:none; } }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--overlay);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Inter', monospace;
+      font-size: 0.95rem;
+      padding: 0.85rem 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(137,180,250,0.2);
+    }
+
+    input[type="text"]::placeholder { color: var(--overlay); }
+
+    .hint {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--subtext);
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.95rem;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      background: linear-gradient(135deg, var(--blue), var(--mauve));
+      color: var(--bg);
+    }
+
+    .btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(137,180,250,0.35); }
+    .btn:active { transform: translateY(0);    box-shadow: none; }
+
+    .btn .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(30,30,46,0.3);
+      border-top-color: var(--bg);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .feature-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      justify-content: center;
+    }
+
+    .pill {
+      background: rgba(137,180,250,0.08);
+      border: 1px solid rgba(137,180,250,0.2);
+      border-radius: 20px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.8rem;
+      color: var(--blue);
+    }
+
+    .models-info {
+      margin-top: 1.8rem;
+      background: rgba(30,30,46,0.6);
+      border: 1px solid var(--overlay);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+    }
+
+    .models-info h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--subtext);
+      margin-bottom: 0.7rem;
+    }
+
+    .model-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .badge {
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-primary  { background: rgba(166,227,161,0.15); color: var(--green);  border: 1px solid rgba(166,227,161,0.3); }
+    .badge-fallback { background: rgba(249,226,175,0.15); color: var(--yellow); border: 1px solid rgba(249,226,175,0.3); }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <span class="icon">📄</span>
+    <h1>Document Summarizer</h1>
+    <p>Connect your Google Drive folder and instantly get AI-powered summaries of all your documents.</p>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="/summarize" onsubmit="handleSubmit(this)">
+      <div class="form-group">
+        <label for="folder_id">Google Drive Folder ID</label>
+        <input
+          type="text"
+          id="folder_id"
+          name="folder_id"
+          value="{{ default_folder_id }}"
+          placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+          required
+          autocomplete="off"
+        />
+        <p class="hint">Found in the folder URL: drive.google.com/drive/folders/<strong>THIS_PART</strong></p>
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnText">✨ Summarize Documents</span>
+      </button>
+    </form>
+
+    <div class="models-info">
+      <h3>⚡ AI Models (Auto-Fallback)</h3>
+      <div class="model-row">
+        <span class="badge badge-primary">Primary</span>
+        <span>distilbart-cnn-6-6 <em style="color:var(--subtext)">(local, CPU)</em></span>
+      </div>
+      <div class="model-row">
+        <span class="badge badge-fallback">Fallback</span>
+        <span>llama3-8b-8192 <em style="color:var(--subtext)">(Groq cloud API)</em></span>
+      </div>
+    </div>
+
+    <div class="feature-pills">
+      <span class="pill">📄 PDF</span>
+      <span class="pill">📝 DOCX</span>
+      <span class="pill">🗒️ TXT</span>
+      <span class="pill">📊 CSV Export</span>
+      <span class="pill">📋 PDF Report</span>
+    </div>
+  </div>
+
+  <script>
+    function handleSubmit(form) {
+      const btn      = document.getElementById('submitBtn');
+      const spinner  = document.getElementById('spinner');
+      const btnText  = document.getElementById('btnText');
+      btn.disabled   = true;
+      spinner.style.display = 'block';
+      btnText.textContent   = 'Processing…';
+    }
+  </script>
+</body>
+</html>

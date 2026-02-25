@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env
+venv/
+.venv/
+
+# Google OAuth (contains sensitive tokens)
+token.json
+credentials.json
+
+# Temp files
+tmp/
+
+# HuggingFace model cache (very large)
+~/.cache/huggingface/

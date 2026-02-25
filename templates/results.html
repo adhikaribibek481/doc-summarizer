@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📊 Summaries — Document Summarizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #1e1e2e;
+            --surface: #313244;
+            --overlay: #45475a;
+            --text: #cdd6f4;
+            --subtext: #a6adc8;
+            --blue: #89b4fa;
+            --mauve: #cba6f7;
+            --green: #a6e3a1;
+            --red: #f38ba8;
+            --yellow: #f9e2af;
+            --teal: #94e2d5;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            background-image:
+                radial-gradient(ellipse at 10% 30%, rgba(137, 180, 250, 0.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 70%, rgba(203, 166, 247, 0.07) 0%, transparent 55%);
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+            animation: fadeDown 0.5s ease;
+        }
+
+        @keyframes fadeDown {
+            from {
+                opacity: 0;
+                transform: translateY(-14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--blue), var(--mauve));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-title .icon {
+            font-size: 2rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue), var(--mauve));
+            color: var(--bg);
+        }
+
+        .btn-csv {
+            background: rgba(166, 227, 161, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(166, 227, 161, 0.3);
+        }
+
+        .btn-pdf {
+            background: rgba(203, 166, 247, 0.15);
+            color: var(--mauve);
+            border: 1px solid rgba(203, 166, 247, 0.3);
+        }
+
+        .btn-back {
+            background: rgba(137, 180, 250, 0.12);
+            color: var(--blue);
+            border: 1px solid rgba(137, 180, 250, 0.25);
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            animation: fadeUp 0.5s ease 0.1s both;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--overlay);
+            border-radius: 14px;
+            padding: 0.9rem 1.4rem;
+            min-width: 130px;
+        }
+
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: var(--subtext);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .stat-card .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        /* Alerts */
+        .alert {
+            border-radius: 12px;
+            padding: 0.9rem 1.2rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.9rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .alert-warning {
+            background: rgba(249, 226, 175, 0.1);
+            border: 1px solid rgba(249, 226, 175, 0.25);
+            color: var(--yellow);
+        }
+
+        .alert-info {
+            background: rgba(137, 180, 250, 0.1);
+            border: 1px solid rgba(137, 180, 250, 0.25);
+            color: var(--blue);
+        }
+
+        /* Table wrapper */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--overlay);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            animation: fadeUp 0.6s ease 0.15s both;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+        }
+
+        thead {
+            background: #2a2a3e;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        thead th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--subtext);
+            border-bottom: 1px solid var(--overlay);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--overlay);
+            transition: background 0.15s;
+            animation: fadeIn 0.4s ease both;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(137, 180, 250, 0.05);
+        }
+
+        td {
+            padding: 1.1rem 1.2rem;
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+
+        .col-num {
+            width: 50px;
+            color: var(--subtext);
+            font-weight: 600;
+        }
+
+        .col-file {
+            min-width: 180px;
+        }
+
+        .col-sum {
+            min-width: 350px;
+            line-height: 1.65;
+        }
+
+        .col-model {
+            min-width: 180px;
+            white-space: nowrap;
+        }
+
+        .col-link {
+            width: 90px;
+            text-align: center;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .summary-text {
+            color: var(--subtext);
+            line-height: 1.7;
+        }
+
+        .summary-error {
+            color: var(--red);
+            font-style: italic;
+        }
+
+        .model-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .model-local {
+            background: rgba(166, 227, 161, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(166, 227, 161, 0.25);
+        }
+
+        .model-groq {
+            background: rgba(249, 226, 175, 0.12);
+            color: var(--yellow);
+            border: 1px solid rgba(249, 226, 175, 0.25);
+        }
+
+        .model-none {
+            background: rgba(243, 139, 168, 0.12);
+            color: var(--red);
+            border: 1px solid rgba(243, 139, 168, 0.25);
+        }
+
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.35rem 0.75rem;
+            border-radius: 8px;
+            background: rgba(137, 180, 250, 0.1);
+            color: var(--blue);
+            border: 1px solid rgba(137, 180, 250, 0.2);
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+
+        .link-btn:hover {
+            background: rgba(137, 180, 250, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--subtext);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .empty-state .icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.4rem;
+            color: var(--text);
+        }
+
+        footer {
+            margin-top: 2.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--overlay);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="page-title">
+            <span class="icon">📊</span>
+            <h1>Summaries</h1>
+        </div>
+        <div class="actions">
+            {% if results %}
+            <a href="/download/csv" class="btn btn-csv">⬇ CSV</a>
+            <a href="/download/pdf" class="btn btn-pdf">⬇ PDF Report</a>
+            {% endif %}
+            <a href="/" class="btn btn-back">← New Folder</a>
+        </div>
+    </header>
+
+    {% if results %}
+    <!-- Count per model (Jinja2 has no 'match' test, use namespace) -->
+    {% set ns = namespace(local_count=0, groq_count=0) %}
+    {% for item in results %}
+    {% if 'Local' in item.model_used %}{% set ns.local_count = ns.local_count + 1 %}{% endif %}
+    {% if 'Groq' in item.model_used %}{% set ns.groq_count = ns.groq_count + 1 %}{% endif %}
+    {% endfor %}
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="label">Files Processed</div>
+            <div class="value">{{ results | length }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Local Model</div>
+            <div class="value" style="color:var(--green)">{{ ns.local_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Groq Fallback</div>
+            <div class="value" style="color:var(--yellow)">{{ ns.groq_count }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Folder ID</div>
+            <div class="value" style="font-size:0.75rem; color:var(--subtext); word-break:break-all; max-width:200px;">
+                {{ folder_id[:36] }}{% if folder_id|length > 36 %}…{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if message %}
+    <div class="alert alert-info">ℹ️ {{ message }}</div>
+    {% endif %}
+
+    {% if errors %}
+    <div class="alert alert-warning">
+        ⚠️ <strong>{{ errors | length }} file(s) had errors:</strong><br>
+        {% for e in errors %}<span style="display:block; margin-top:4px">• {{ e }}</span>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-file">File Name</th>
+                    <th class="col-sum">Summary</th>
+                    <th class="col-model">Model Used</th>
+                    <th class="col-link">Open</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results %}
+                <tr style="animation-delay: {{ loop.index0 * 0.06 }}s">
+                    <td class="col-num">{{ loop.index }}</td>
+                    <td class="col-file">
+                        <div class="file-name">{{ item.file_name }}</div>
+                    </td>
+                    <td class="col-sum">
+                        {% if item.error and item.model_used == "none" %}
+                        <span class="summary-error">{{ item.summary }}</span>
+                        {% else %}
+                        <span class="summary-text">{{ item.summary }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-model">
+                        {% if "Local" in item.model_used %}
+                        <span class="model-badge model-local">🟢 {{ item.model_used }}</span>
+                        {% elif "Groq" in item.model_used %}
+                        <span class="model-badge model-groq">⚡ {{ item.model_used }}</span>
+                        {% else %}
+                        <span class="model-badge model-none">⚠️ failed</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-link">
+                        {% if item.web_link and item.web_link != "#" %}
+                        <a href="{{ item.web_link }}" target="_blank" class="link-btn">↗ Drive</a>
+                        {% else %}
+                        <span style="color:var(--overlay)">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">🗂️</div>
+        <h2>No documents found</h2>
+        <p>Make sure the folder contains PDF, DOCX, or TXT files and the folder is shared with your service account.</p>
+    </div>
+    {% endif %}
+
+    <footer>Document Summarizer · distilbart-cnn-6-6 (local) + Groq llama-3.1-8b-instant (fallback)</footer>
+
+</body>
+
+</html>
