@@ -14,7 +14,7 @@ token.json
 credentials.json
 
 # Temp files
-tmp/
+# tmp/
 
 # HuggingFace model cache (very large)
 ~/.cache/huggingface/
