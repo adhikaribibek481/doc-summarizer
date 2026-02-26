@@ -17,26 +17,26 @@ If the local model fails (e.g. OOM), the app automatically falls back to Groq tr
 
 ```mermaid
 graph TD
-    A[User enters Folder ID] --> B[FastAPI /summarize route]
-    B --> C[Google Drive Auth & File Listing]
-    C --> D{Loop through Files}
+    A["User enters Folder ID"] --> B["FastAPI /summarize route"]
+    B --> C["Google Drive Auth & File Listing"]
+    C --> D{"Loop through Files"}
     
     subgraph "Document Processing"
-    D --> E[Download to /tmp]
-    E --> F[Text Extraction: PDF, DOCX, TXT]
-    F --> G[Summarization Engine]
+    D --> E["Download to /tmp"]
+    E --> F["Text Extraction: PDF, DOCX, TXT"]
+    F --> G["Summarization Engine"]
     end
 
     subgraph "Summarization Logic"
-    G --> H{Try Local Model?}
-    H -- Success --> I[distilBART: Chunking -> Inference -> Dedup -> Final Pass]
-    H -- Fail --> J[Groq API: Llama-3.1 Fallback]
+    G --> H{"Try Local Model?"}
+    H -- "Success" --> I["distilBART: Chunking, Inference, Dedup, Final Pass"]
+    H -- "Fail" --> J["Groq API: Llama-3.1 Fallback"]
     end
 
-    I --> K[Store Results]
+    I --> K["Store Results"]
     J --> K
-    K --> L[Display in Web UI]
-    L --> M[Export to CSV / PDF]
+    K --> L["Display in Web UI"]
+    L --> M["Export to CSV / PDF"]
 ```
 
 ### Pipeline:
