@@ -2,11 +2,6 @@
 Dual-model summarization with automatic fallback
 Primary: sshleifer/distilbart-cnn-12-6 (local, CPU)
 Fallback: llama-3.1-8b-instant via Groq API
-
-Improvements over base version:
-- Uses distilbart-cnn-12-6 (deeper model, better coherence)
-- Summary-of-summaries: chunk summaries are re-summarized for a clean final output
-- Sentence deduplication: removes repeated sentences across chunks
 """
 
 import os
@@ -25,11 +20,11 @@ GROQ_MODEL_NAME  = "llama-3.1-8b-instant"
 MAX_CHUNK_CHARS  = 3000   # safe chars per chunk for distilbart
 MAX_INPUT_CHARS  = 12000  # safe chars before passing to Groq
 
-_local_model     = None
-_local_tokenizer = None
+local_model = None
+local_tokenizer = None
 
 
-def _chunk_text(text: str, chunk_size: int = MAX_CHUNK_CHARS) -> list[str]:
+def chunk_text(text: str, chunk_size: int = MAX_CHUNK_CHARS) -> list[str]:
     paragraphs = text.split("\n")
     chunks, current = [], ""
     for para in paragraphs:
@@ -52,7 +47,7 @@ def _chunk_text(text: str, chunk_size: int = MAX_CHUNK_CHARS) -> list[str]:
     return final_chunks or [text[:chunk_size]]
 
 
-def _deduplicate_sentences(text: str) -> str:
+def deduplicate_sentences(text: str) -> str:
     """Remove duplicate or near-duplicate sentences from the summary."""
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     seen, unique = set(), []
@@ -64,21 +59,21 @@ def _deduplicate_sentences(text: str) -> str:
     return " ".join(unique)
 
 
-def _get_local_model():
-    global _local_model, _local_tokenizer
-    if _local_model is None:
+def get_local_model():
+    global local_model, local_tokenizer
+    if local_model is None:
         from transformers import BartForConditionalGeneration, BartTokenizer
         logger.info(f"Loading local model: {LOCAL_MODEL_NAME} ...")
-        _local_tokenizer = BartTokenizer.from_pretrained(LOCAL_MODEL_NAME)
-        _local_model     = BartForConditionalGeneration.from_pretrained(LOCAL_MODEL_NAME)
-        _local_model.eval()
+        local_tokenizer = BartTokenizer.from_pretrained(LOCAL_MODEL_NAME)
+        local_model = BartForConditionalGeneration.from_pretrained(LOCAL_MODEL_NAME)
+        local_model.eval()
         logger.info("Local model loaded successfully.")
-    return _local_model, _local_tokenizer
+    return local_model, local_tokenizer
 
 
-def _summarize_text(text: str, max_out: int = 150, min_out: int = 40) -> str:
+def summarize_text(text: str, max_out: int = 150, min_out: int = 40) -> str:
     """Run one distilBART summarization pass on text."""
-    model, tokenizer = _get_local_model()
+    model, tokenizer = get_local_model()
     inputs = tokenizer(text, max_length=1024, truncation=True, return_tensors="pt")
     with torch.no_grad():
         ids = model.generate(
@@ -93,39 +88,39 @@ def _summarize_text(text: str, max_out: int = 150, min_out: int = 40) -> str:
     return tokenizer.decode(ids[0], skip_special_tokens=True)
 
 
-def _try_local(text: str) -> str:
+def try_local(text: str) -> str:
     """
     Summarize using local distilBART with summary-of-summaries:
     1. Summarize each chunk individually
     2. Deduplicate sentences across chunk summaries
     3. If multiple chunks, do a final summarization pass for coherence
     """
-    chunks    = _chunk_text(text, MAX_CHUNK_CHARS)
+    chunks    = chunk_text(text, MAX_CHUNK_CHARS)
     summaries = []
 
     for chunk in chunks:
         if len(chunk.strip()) < 50:
             continue
-        summaries.append(_summarize_text(chunk, max_out=150, min_out=40))
+        summaries.append(summarize_text(chunk, max_out=150, min_out=40))
 
     if not summaries:
         return text[:500]
 
     joined = " ".join(summaries)
-    joined = _deduplicate_sentences(joined)
+    joined = deduplicate_sentences(joined)
 
     # If there were multiple chunks, do a final pass to make it coherent
     if len(summaries) > 1 and len(joined) > 200:
         try:
-            final = _summarize_text(joined, max_out=200, min_out=60)
-            return _deduplicate_sentences(final)
+            final = summarize_text(joined, max_out=200, min_out=60)
+            return deduplicate_sentences(final)
         except Exception:
             pass
 
     return joined
 
 
-def _try_groq(text: str) -> str:
+def try_groq(text: str) -> str:
     """Summarize using Groq llama-3.1-8b-instant. Returns summary string."""
     from groq import Groq
 
@@ -171,7 +166,7 @@ class SummarizationEngine:
         local_error: Optional[str] = None
         try:
             logger.info("Attempting local summarization...")
-            summary = _try_local(text)
+            summary = try_local(text)
             logger.info("Local summarization succeeded.")
             return {
                 "summary":    summary,
@@ -185,7 +180,7 @@ class SummarizationEngine:
         # ── Fallback: Groq ────────────────────────────────────────────────────
         try:
             logger.info("Attempting Groq summarization...")
-            summary = _try_groq(text)
+            summary = try_groq(text)
             logger.info("Groq summarization succeeded.")
             return {
                 "summary":    summary,

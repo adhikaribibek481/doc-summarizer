@@ -1,4 +1,4 @@
-# google_drive.py - Google Drive OAuth2 authentication and file management
+# Google Drive OAuth2 authentication and file management
 
 import io
 import os
@@ -71,7 +71,6 @@ def authenticate() -> object:
 def list_files(service, folder_id: str) -> list[dict]:
     """
     Lists all supported files inside a Google Drive folder.
-
     Returns list of dicts: {id, name, mimeType, webViewLink}
     """
     mime_filter = " or ".join(

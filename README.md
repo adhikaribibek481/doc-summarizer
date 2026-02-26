@@ -13,6 +13,43 @@ If the local model fails (e.g. OOM), the app automatically falls back to Groq tr
 
 ---
 
+## ⚙️ System Workflow
+
+```mermaid
+graph TD
+    A[User enters Folder ID] --> B[FastAPI /summarize route]
+    B --> C[Google Drive Auth & File Listing]
+    C --> D{Loop through Files}
+    
+    subgraph "Document Processing"
+    D --> E[Download to /tmp]
+    E --> F[Text Extraction: PDF, DOCX, TXT]
+    F --> G[Summarization Engine]
+    end
+
+    subgraph "Summarization Logic"
+    G --> H{Try Local Model?}
+    H -- Success --> I[distilBART: Chunking -> Inference -> Dedup -> Final Pass]
+    H -- Fail --> J[Groq API: Llama-3.1 Fallback]
+    end
+
+    I --> K[Store Results]
+    J --> K
+    K --> L[Display in Web UI]
+    L --> M[Export to CSV / PDF]
+```
+
+### Pipeline:
+1.  **Ingestion - The Trigger**: You enter a Google Drive Folder ID, and the application authenticates via OAuth2. It scans for supported files (PDF, DOCX, TXT) and automatically handles **Google Docs** by converting them to `.docx` during the download process.
+2.  **Extraction**: Dispatches to the correct parser (`PyMuPDF` for PDF, `python-docx` for Word).
+3.  **Local Summarization**:
+    - **Chunking**: Splits long documents into ~3000-character segments to fit BART's context window (reflecting its strict **1024-token limit**).
+    - **Deduplication**: Removes redundant phrases/sentences generated across blocks.
+    - **Coherence Pass**: If a document is long (multi-chunk), the engine takes all individual chunk summaries and runs them through BART one final time to create a single, unified narrative instead of disjointed pieces.
+4.  **Resilience**: If local hardware resources are insufficient (e.g., OOM), the system auto-switches to the **Groq API** for cloud inference using the high-quality **`llama-3.1-8b-instant`** model.
+
+---
+
 ## 🚀 Setup
 
 ### 1. Clone and Install Dependencies
@@ -118,14 +155,14 @@ doc-summarizer/
 
 - `PDF` — via PyMuPDF (`fitz`)
 - `DOCX` — via `python-docx`
-- `TXT` — plain text read
+- `TXT` — plain text read as UTF-8
 - `Google Docs` — exported as DOCX via Drive API
 
 ---
 
 ## ⚙️ How the Summarizer Works
 
-1. **Local model** (`distilbart-cnn-12-6`) is loaded once on first use (~400MB download)
+1. **Local model** (`distilbart-cnn-12-6`) is loaded once on first use
 2. Long documents are split into chunks of ~3000 characters
 3. Each chunk is summarized individually using beam search with n-gram repetition prevention
 4. Duplicate sentences across chunks are removed

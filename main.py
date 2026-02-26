@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="📄 Document Summarizer", version="1.0.0")
 templates = Jinja2Templates(directory="templates")
 
-# In-memory store for latest results (single-user app)
-_latest_results: list[dict] = []
-_engine = SummarizationEngine()
+# In-memory store for latest results
+latest_results: list[dict] = []
+summarizer_engine = SummarizationEngine()
 
 
 # ─── Home ──────────────────────────────────────────────────────────────────────
@@ -49,8 +49,8 @@ async def home(request: Request):
 # ─── Summarize Pipeline ────────────────────────────────────────────────────────
 @app.post("/summarize", response_class=HTMLResponse)
 async def summarize(request: Request, folder_id: str = Form(...)):
-    global _latest_results
-    _latest_results = []
+    global latest_results
+    latest_results = []
 
     if not folder_id.strip():
         raise HTTPException(status_code=400, detail="Folder ID cannot be empty.")
@@ -58,10 +58,10 @@ async def summarize(request: Request, folder_id: str = Form(...)):
     errors: list[str] = []
 
     try:
-        # 1. Authenticate with Google Drive
+        # Authenticate with Google Drive
         service = authenticate()
 
-        # 2. List supported files in folder
+        # List supported files in folder
         files = list_files(service, folder_id.strip())
         if not files:
             return templates.TemplateResponse(
@@ -74,7 +74,7 @@ async def summarize(request: Request, folder_id: str = Form(...)):
                 },
             )
 
-        # 3. Download → Parse → Summarize each file
+        # Download → Parse → Summarize each file
         for file_meta in files:
             file_id   = file_meta["id"]
             file_name = file_meta["name"]
@@ -82,16 +82,11 @@ async def summarize(request: Request, folder_id: str = Form(...)):
             web_link  = file_meta.get("webViewLink", "#")
 
             try:
-                # Download
                 local_path = download_file(service, file_id, file_name, mime_type)
-
-                # Parse text
                 text = parse_document(local_path, mime_type)
+                result = summarizer_engine.summarize(text)
 
-                # Summarize
-                result = _engine.summarize(text)
-
-                _latest_results.append(
+                latest_results.append(
                     {
                         "file_name":  file_name,
                         "summary":    result["summary"],
@@ -103,7 +98,7 @@ async def summarize(request: Request, folder_id: str = Form(...)):
             except Exception as exc:
                 logger.error(f"Failed to process '{file_name}': {exc}")
                 errors.append(f"{file_name}: {exc}")
-                _latest_results.append(
+                latest_results.append(
                     {
                         "file_name":  file_name,
                         "summary":    f"Processing failed: {exc}",
@@ -123,7 +118,7 @@ async def summarize(request: Request, folder_id: str = Form(...)):
         "results.html",
         {
             "request":   request,
-            "results":   _latest_results,
+            "results":   latest_results,
             "folder_id": folder_id,
             "errors":    errors,
             "message":   None,
@@ -134,7 +129,7 @@ async def summarize(request: Request, folder_id: str = Form(...)):
 # ─── CSV Download ──────────────────────────────────────────────────────────────
 @app.get("/download/csv")
 async def download_csv():
-    if not _latest_results:
+    if not latest_results:
         raise HTTPException(status_code=404, detail="No results to export. Run /summarize first.")
 
     output = io.StringIO()
@@ -144,7 +139,7 @@ async def download_csv():
         extrasaction="ignore",
     )
     writer.writeheader()
-    writer.writerows(_latest_results)
+    writer.writerows(latest_results)
     output.seek(0)
 
     return StreamingResponse(
@@ -157,7 +152,7 @@ async def download_csv():
 # ─── PDF Download ──────────────────────────────────────────────────────────────
 @app.get("/download/pdf")
 async def download_pdf():
-    if not _latest_results:
+    if not latest_results:
         raise HTTPException(status_code=404, detail="No results to export. Run /summarize first.")
 
     from fpdf import FPDF
@@ -180,7 +175,7 @@ async def download_pdf():
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    for i, item in enumerate(_latest_results, 1):
+    for i, item in enumerate(latest_results, 1):
         # File heading
         pdf.set_font("Helvetica", "B", 12)
         pdf.set_text_color(30, 30, 46)
