@@ -29,7 +29,7 @@ graph TD
 
     subgraph "Summarization Logic"
     G --> H{"Try Local Model?"}
-    H -- "Success" --> I["distilBART: Chunking, Inference, Dedup, Final Pass"]
+    H -- "Success" --> I["distilBART: Chunking, Generation, Deduplication, Final Pass"]
     H -- "Fail" --> J["Groq API: Llama-3.1 Fallback"]
     end
 
@@ -40,12 +40,15 @@ graph TD
 ```
 
 ### Pipeline:
-1.  **Ingestion - The Trigger**: You enter a Google Drive Folder ID, and the application authenticates via OAuth2. It scans for supported files (PDF, DOCX, TXT) and automatically handles **Google Docs** by converting them to `.docx` during the download process.
-2.  **Extraction**: Dispatches to the correct parser (`PyMuPDF` for PDF, `python-docx` for Word).
+1.  **Ingestion (The Trigger)**: You enter a Google Drive Folder ID, and the application authenticates via OAuth2. It scans for supported files (PDF, DOCX, TXT) and automatically handles **Google Docs** by converting them to `.docx` during the download process.
+
+2.  **Extraction**: Dispatches to the correct parser (`PyMuPDF` for PDF, `python-docx` for Word) to extract plain text from the downloaded files.
+
 3.  **Local Summarization**:
     - **Chunking**: Splits long documents into ~3000-character segments to fit BART's context window (reflecting its strict **1024-token limit**).
-    - **Deduplication**: Removes redundant phrases/sentences generated across blocks.
-    - **Coherence Pass**: If a document is long (multi-chunk), the engine takes all individual chunk summaries and runs them through BART one final time to create a single, unified narrative instead of disjointed pieces.
+    - **Deduplication**: A custom logic pass removes redundant phrases or identical sentences generated across different document segments for a cleaner output.
+    - **Coherence Pass (Final Pass)**: If a document is long (multi-chunk), the engine takes all individual chunk summaries and runs them through BART one final time. This ensures a single, unified narrative instead of disjointed pieces.
+
 4.  **Resilience**: If local hardware resources are insufficient (e.g., OOM), the system auto-switches to the **Groq API** for cloud inference using the high-quality **`llama-3.1-8b-instant`** model.
 
 ---
